@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HOD - {{ event.title }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f4f6f8;
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      padding: 20px 15px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      padding: 25px;
+      max-width: 1000px;
+      margin: 0 auto;
+      animation: fadeIn 0.4s ease-in-out;
+    }
+    h3 {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    p.text-muted {
+      font-size: 0.95rem;
+    }
+    table {
+      margin-top: 20px;
+    }
+    .status-Approved { color: green; font-weight: bold; }
+    .status-Pending { color: goldenrod; font-weight: bold; }
+    .status-Rejected { color: red; font-weight: bold; }
+    .btn-sm {
+      border-radius: 10px;
+      font-weight: 500;
+      margin-right: 5px;
+      margin-bottom: 3px;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 576px) {
+      body { padding: 15px 10px; }
+      .card { padding: 20px; }
+      table th, table td { font-size: 0.85rem; }
+      .btn-sm { font-size: 0.75rem; padding: 5px 8px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+      <h3>{{ event.title }} — Review Attendance</h3>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('dashboard') }}">Back</a>
+    </div>
+
+    <p class="text-muted">
+      <strong>Description:</strong> {{ event.description }}<br>
+      <strong>Location:</strong> {{ event.location }}<br>
+      <strong>Date & Time:</strong> {{ event.when_dt }}
+    </p>
+
+    <hr>
+
+    <h5>Attendance List</h5>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>Roll</th>
+            <th>Name</th>
+            <th>Branch</th>
+            <th>Scanned At</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr id="row-{{ r.id }}">
+            <td>{{ r.roll }}</td>
+            <td>{{ r.student_name or "Unknown" }}</td>
+            <td>{{ r.branch or "-" }}</td>
+            <td>{{ r.scanned_at }}</td>
+            <td id="status-{{ r.id }}" class="status-{{ r.status|capitalize }}">{{ r.status|capitalize }}</td>
+            <td>
+              <button class="btn btn-sm btn-success" id="Approve-{{ r.id }}" onclick="hodAction({{ r.id }}, 'Approved')">Approve</button>
+              <button class="btn btn-sm btn-warning" id="Review-{{ r.id }}" onclick="hodAction({{ r.id }}, 'Pending')">Review</button>
+              <button class="btn btn-sm btn-danger" id="Reject-{{ r.id }}" onclick="hodAction({{ r.id }}, 'Rejected')">Reject</button>
+            </td>
+          </tr>
+          <script>
+            // Hide button that matches current status
+            const status = "{{ r.status }}";
+            if(status === "Approved") document.getElementById("Approve-{{ r.id }}").style.display="none";
+            if(status === "Pending") document.getElementById("Review-{{ r.id }}").style.display="none";
+            if(status === "Rejected") document.getElementById("Reject-{{ r.id }}").style.display="none";
+          </script>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted">No attendance records yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+  function hodAction(attId, action) {
+    const statusCell = document.getElementById("status-" + attId);
+    const ApproveBtn = document.getElementById("Approve-" + attId);
+    const ReviewBtn = document.getElementById("Review-" + attId);
+    const RejectBtn = document.getElementById("Reject-" + attId);
+
+    fetch("/hod_action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ attendance_id: attId, action: action })
+    })
+    .then(r => r.json())
+    .then(js => {
+      if(js.ok){
+        // Update status text and color
+        statusCell.innerText = action;
+        statusCell.className = action === "Approved" ? "status-Approved" :
+                               action === "Rejected" ? "status-Rejected" :
+                               "status-Pending";
+
+        // Show/hide buttons based on new status
+        ApproveBtn.style.display = action === "Approved" ? "none" : "inline-block";
+        ReviewBtn.style.display = action === "Pending" ? "none" : "inline-block";
+        RejectBtn.style.display = action === "Rejected" ? "none" : "inline-block";
+      } else {
+        alert("Error updating attendance.");
+      }
+    })
+    .catch(err => {
+      console.error("Error:", err);
+      alert("Network or server error.");
+    });
+  }
+  </script>
+</body>
+</html>

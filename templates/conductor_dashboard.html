@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conductor Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f4f6f8;
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .dashboard-container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      padding: 30px;
+    }
+    .dashboard-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .dashboard-header h3 {
+      font-weight: 600;
+      color: #1a1a1a;
+      margin: 0;
+    }
+    .btn-custom {
+      border-radius: 10px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-custom:hover {
+      transform: translateY(-1px);
+    }
+    .list-group-item {
+      border: none;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .event-title {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    .event-details {
+      color: #555;
+      font-size: 0.9rem;
+    }
+    @media (max-width: 576px) {
+      .dashboard-container {
+        margin: 20px 10px;
+        padding: 20px;
+      }
+      .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .dashboard-header div {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-container">
+    <div class="dashboard-header mb-3">
+      <h3>Welcome, {{ conductor_name or "Conductor" }}</h3>
+      <div>
+        <a class="btn btn-primary btn-custom me-2" href="{{ url_for('create_event') }}">Create Event</a>
+        <a class="btn btn-outline-danger btn-custom" href="{{ url_for('logout') }}">Logout</a>
+      </div>
+    </div>
+
+    <hr>
+
+    <h5 class="mb-3 text-secondary">Your Events</h5>
+
+    {% if events %}
+      <ul class="list-group">
+        {% for e in events %}
+          <li class="list-group-item d-flex justify-content-between align-items-start flex-wrap">
+            <div class="me-3">
+              <div class="event-title">{{ e.title }}</div>
+              <div class="event-details">{{ e.description }} • {{ e.location }} • {{ e.when_dt }}</div>
+            </div>
+            <a class="btn btn-sm btn-primary btn-custom mt-2 mt-md-0" href="{{ url_for('view_event', event_id=e.id) }}">Open</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted">No events yet.</p>
+    {% endif %}
+  </div>
+
+</body>
+</html>
