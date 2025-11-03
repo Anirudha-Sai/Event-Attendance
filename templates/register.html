@@ -3,137 +3,113 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Register</title>
+  <title>Register | Attendance System</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background: #f4f6f8;
-      font-family: 'Inter', 'Segoe UI', sans-serif;
-      padding: 20px 15px;
-    }
-    .card {
-      max-width: 600px;
-      margin: 30px auto;
-      background: #fff;
-      border-radius: 16px;
-      padding: 30px 25px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      animation: fadeIn 0.4s ease-in-out;
-    }
-    h2 {
-      font-weight: 600;
-      color: #2c3e50;
-    }
-    label {
-      font-weight: 500;
-      color: #34495e;
-    }
-    .btn-success {
-      border-radius: 12px;
-      font-weight: 500;
-      padding: 10px;
-    }
-    p.text-center a {
-      text-decoration: none;
-      font-weight: 500;
-    }
-    .alert {
-      border-radius: 12px;
-      font-size: 0.95rem;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @media (max-width: 576px) {
-      .card {
-        padding: 20px 15px;
-      }
-      label {
-        font-size: 0.9rem;
-      }
-      .btn-success {
-        font-size: 0.9rem;
-        padding: 8px;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
 </head>
-
 <body>
-  <div class="card">
-    <h2 class="mb-4 text-center">Register</h2>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for cat, msg in messages %}
-          <div class="alert alert-{{ cat }}">{{ msg }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <form method="post" action="{{ url_for('register') }}">
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label>Name</label>
-          <input class="form-control" name="name" required>
+  <div class="register-container">
+    <div class="card-custom fade-in">
+      <div class="register-header">
+        <div class="register-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="8.5" cy="7" r="4"/>
+            <line x1="20" y1="8" x2="20" y2="14"/>
+            <line x1="23" y1="11" x2="17" y2="11"/>
+          </svg>
         </div>
-        <div class="col-md-6 mb-3">
-          <label>Email</label>
-          <input type="email" class="form-control" name="email" required>
-        </div>
+        <h2 class="heading-secondary">Create Account</h2>
+        <p class="text-muted-custom">Join the attendance management system</p>
       </div>
 
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label>Password</label>
-          <input type="password" class="form-control" name="password" required>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for cat, msg in messages %}
+            <div class="alert-custom alert-{{ cat }}">
+              {{ msg }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" action="{{ url_for('register') }}">
+        <div class="form-row">
+          <div class="form-group-custom">
+            <label class="form-label-custom">Full Name</label>
+            <input type="text" class="form-control-custom" name="name" required placeholder="John Doe">
+          </div>
+          
+          <div class="form-group-custom">
+            <label class="form-label-custom">Email Address</label>
+            <input type="email" class="form-control-custom" name="email" required placeholder="john@example.com">
+          </div>
         </div>
-        <div class="col-md-6 mb-3">
-          <label>Confirm Password</label>
-          <input type="password" class="form-control" name="confirm_password" required>
+
+        <div class="form-row">
+          <div class="form-group-custom">
+            <label class="form-label-custom">Password</label>
+            <input type="password" class="form-control-custom" name="password" required placeholder="Min. 8 characters">
+          </div>
+          
+          <div class="form-group-custom">
+            <label class="form-label-custom">Confirm Password</label>
+            <input type="password" class="form-control-custom" name="confirm_password" required placeholder="Re-enter password">
+          </div>
         </div>
+
+        <div class="form-row">
+          <div class="form-group-custom">
+            <label class="form-label-custom">Role</label>
+            <select class="form-select-custom" name="role" required>
+              <option value="">Select your role</option>
+              <option value="student">Student</option>
+              <option value="conductor">Conductor</option>
+              <option value="hod">HOD</option>
+            </select>
+          </div>
+          
+          <div class="form-group-custom">
+            <label class="form-label-custom">Branch/Department</label>
+            <select class="form-select-custom" name="branch" required>
+              <option value="">Select branch</option>
+              <option value="AE">AE (Aeronautical Engineering)</option>
+              <option value="CIVIL">CIVIL (Civil Engineering)</option>
+              <option value="MECH">MECH (Mechanical Engineering)</option>
+              <option value="CSE">CSE (Computer Science & Engineering)</option>
+              <option value="CSBS">CSBS (Computer Science & Business Systems)</option>
+              <option value="CYS">CYS (Cyber Security)</option>
+              <option value="CSE-DS">CSE-DS (Data Science)</option>
+              <option value="IOT">IOT (Internet of Things)</option>
+              <option value="AI&DS">AI&DS (Artificial Intelligence & Data Science)</option>
+              <option value="IT">IT (Information Technology)</option>
+              <option value="ECE">ECE (Electronics & Communication Engineering)</option>
+              <option value="EEE">EEE (Electrical & Electronics Engineering)</option>
+              <option value="EIE">EIE (Electronics & Instrumentation Engineering)</option>
+              <option value="VLSI">VLSI (Very Large Scale Integration)</option>
+              <option value="RAI">RAI (Robotics & Artificial Intelligence)</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-custom btn-primary-custom w-100 mt-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="8.5" cy="7" r="4"/>
+            <line x1="20" y1="8" x2="20" y2="14"/>
+            <line x1="23" y1="11" x2="17" y2="11"/>
+          </svg>
+          Create Account
+        </button>
+      </form>
+
+      <div class="register-footer">
+        Already have an account? <a href="{{ url_for('login') }}">Sign in here</a>
       </div>
-
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label>Role</label>
-          <select class="form-select" name="role" required>
-            <option value="">Select Role</option>
-            <option value="student">Student</option>
-            <option value="conductor">Conductor</option>
-            <option value="hod">HOD</option>
-          </select>
-        </div>
-        <div class="col-md-6 mb-3">
-          <label>Branch</label>
-          <select class="form-select" name="branch" required>
-            <option value="">Select Branch</option>
-            <option value="AE">AE (Aeronautical Engineering)</option>
-            <option value="CIVIL">CIVIL (Civil Engineering)</option>
-            <option value="MECH">MECH (Mechanical Engineering)</option>
-            <option value="CSE">CSE (Computer Science & Engineering)</option>
-            <option value="CSBS">CSBS (Computer Science & Business Systems)</option>
-            <option value="CYS">CYS (Cyber Security)</option>
-            <option value="CSE-DS">CSE-DS (Data Science)</option>
-            <option value="IOT">IOT (Internet of Things)</option>
-            <option value="AI&DS">AI&DS (Artificial Intelligence & Data Science)</option>
-            <option value="IT">IT (Information Technology)</option>
-            <option value="ECE">ECE (Electronics & Communication Engineering)</option>
-            <option value="EEE">EEE (Electrical & Electronics Engineering)</option>
-            <option value="EIE">EIE (Electronics & Instrumentation Engineering)</option>
-            <option value="VLSI">VLSI (Very Large Scale Integration)</option>
-            <option value="RAI">RAI (Robotics & Artificial Intelligence)</option>
-          </select>
-        </div>
-      </div>
-
-      <button class="btn btn-success w-100 mt-3">Register</button>
-    </form>
-
-    <p class="text-center mt-3">
-      Already have an account? <a href="{{ url_for('login') }}">Login here</a>
-    </p>
+    </div>
   </div>
+
+  <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
 </body>
 </html>

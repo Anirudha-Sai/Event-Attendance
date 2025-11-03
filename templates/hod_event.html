@@ -3,111 +3,150 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HOD - {{ event.title }}</title>
+  <title>{{ event.title }} - Review | Attendance System</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background: #f4f6f8;
-      font-family: 'Inter', 'Segoe UI', sans-serif;
-      padding: 20px 15px;
-    }
-    .card {
-      background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      padding: 25px;
-      max-width: 1000px;
-      margin: 0 auto;
-      animation: fadeIn 0.4s ease-in-out;
-    }
-    h3 {
-      font-weight: 600;
-      color: #2c3e50;
-    }
-    p.text-muted {
-      font-size: 0.95rem;
-    }
-    table {
-      margin-top: 20px;
-    }
-    .status-Approved { color: green; font-weight: bold; }
-    .status-Pending { color: goldenrod; font-weight: bold; }
-    .status-Rejected { color: red; font-weight: bold; }
-    .btn-sm {
-      border-radius: 10px;
-      font-weight: 500;
-      margin-right: 5px;
-      margin-bottom: 3px;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @media (max-width: 576px) {
-      body { padding: 15px 10px; }
-      .card { padding: 20px; }
-      table th, table td { font-size: 0.85rem; }
-      .btn-sm { font-size: 0.75rem; padding: 5px 8px; }
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hod_event.css') }}">
 </head>
-
 <body>
-  <div class="card">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
-      <h3>{{ event.title }} — Review Attendance</h3>
-      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('dashboard') }}">Back</a>
-    </div>
+  <div class="container-custom">
+    <div class="fade-in">
+      <!-- Event Info Header -->
+      <div class="event-info-card">
+        <div class="d-flex justify-between align-center flex-wrap gap-2 mb-3">
+          <h1 style="margin: 0;">{{ event.title }}</h1>
+          <a href="{{ url_for('dashboard') }}" class="btn-custom btn-secondary-custom btn-sm-custom" style="background: rgba(255,255,255,0.2); color: white; border: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Back
+          </a>
+        </div>
+        <div class="event-meta">
+          <div class="event-meta-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            {{ event.location }}
+          </div>
+          <div class="event-meta-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            {{ event.when_dt }}
+          </div>
+        </div>
+        {% if event.description %}
+        <p style="margin-top: 16px; margin-bottom: 0; opacity: 0.95;">{{ event.description }}</p>
+        {% endif %}
+      </div>
 
-    <p class="text-muted">
-      <strong>Description:</strong> {{ event.description }}<br>
-      <strong>Location:</strong> {{ event.location }}<br>
-      <strong>Date & Time:</strong> {{ event.when_dt }}
-    </p>
+      <div class="card-custom">
+        <!-- Approval Stats -->
+        <div class="approval-stats">
+          <div class="stat-box">
+            <div class="stat-box-number">{{ rows|length }}</div>
+            <div class="stat-box-label">Total Records</div>
+          </div>
+          <div class="stat-box approved">
+            <div class="stat-box-number">{{ rows|selectattr('status', 'equalto', 'Approved')|list|length }}</div>
+            <div class="stat-box-label">Approved</div>
+          </div>
+          <div class="stat-box pending">
+            <div class="stat-box-number">{{ rows|selectattr('status', 'equalto', 'Pending')|list|length }}</div>
+            <div class="stat-box-label">Pending Review</div>
+          </div>
+          <div class="stat-box rejected">
+            <div class="stat-box-number">{{ rows|selectattr('status', 'equalto', 'Rejected')|list|length }}</div>
+            <div class="stat-box-label">Rejected</div>
+          </div>
+        </div>
 
-    <hr>
-
-    <h5>Attendance List</h5>
-    <div class="table-responsive">
-      <table class="table table-striped align-middle">
-        <thead class="table-dark">
-          <tr>
-            <th>Roll</th>
-            <th>Name</th>
-            <th>Branch</th>
-            <th>Scanned At</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in rows %}
-          <tr id="row-{{ r.id }}">
-            <td>{{ r.roll }}</td>
-            <td>{{ r.student_name or "Unknown" }}</td>
-            <td>{{ r.branch or "-" }}</td>
-            <td>{{ r.scanned_at }}</td>
-            <td id="status-{{ r.id }}" class="status-{{ r.status|capitalize }}">{{ r.status|capitalize }}</td>
-            <td>
-              <button class="btn btn-sm btn-success" id="Approve-{{ r.id }}" onclick="hodAction({{ r.id }}, 'Approved')">Approve</button>
-              <button class="btn btn-sm btn-warning" id="Review-{{ r.id }}" onclick="hodAction({{ r.id }}, 'Pending')">Review</button>
-              <button class="btn btn-sm btn-danger" id="Reject-{{ r.id }}" onclick="hodAction({{ r.id }}, 'Rejected')">Reject</button>
-            </td>
-          </tr>
-          <script>
-            // Hide button that matches current status
-            const status = "{{ r.status }}";
-            if(status === "Approved") document.getElementById("Approve-{{ r.id }}").style.display="none";
-            if(status === "Pending") document.getElementById("Review-{{ r.id }}").style.display="none";
-            if(status === "Rejected") document.getElementById("Reject-{{ r.id }}").style.display="none";
-          </script>
+        <!-- Attendance Table -->
+        <div class="mt-4">
+          <h3 class="heading-tertiary mb-3">Attendance Records</h3>
+          {% if rows %}
+          <div class="table-responsive">
+            <table class="table-custom">
+              <thead>
+                <tr>
+                  <th>Roll Number</th>
+                  <th>Student Name</th>
+                  <th>Branch</th>
+                  <th>Scanned At</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in rows %}
+                <tr id="row-{{ r.id }}">
+                  <td><strong>{{ r.roll }}</strong></td>
+                  <td>{{ r.student_name or "Unknown" }}</td>
+                  <td>{{ r.branch or "-" }}</td>
+                  <td>{{ r.scanned_at }}</td>
+                  <td>
+                    <span id="status-{{ r.id }}" class="status-badge status-{{ r.status|lower }}">
+                      {{ r.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="btn-custom btn-success-custom btn-sm-custom" 
+                              id="Approve-{{ r.id }}" 
+                              onclick="hodAction({{ r.id }}, 'Approved')"
+                              style="{% if r.status == 'Approved' %}display: none;{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Approve
+                      </button>
+                      <button class="btn-custom btn-warning-custom btn-sm-custom" 
+                              id="Review-{{ r.id }}" 
+                              onclick="hodAction({{ r.id }}, 'Pending')"
+                              style="{% if r.status == 'Pending' %}display: none;{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <line x1="12" y1="8" x2="12" y2="12"/>
+                          <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        Review
+                      </button>
+                      <button class="btn-custom btn-danger-custom btn-sm-custom" 
+                              id="Reject-{{ r.id }}" 
+                              onclick="hodAction({{ r.id }}, 'Rejected')"
+                              style="{% if r.status == 'Rejected' %}display: none;{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <line x1="15" y1="9" x2="9" y2="15"/>
+                          <line x1="9" y1="9" x2="15" y2="15"/>
+                        </svg>
+                        Reject
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
           {% else %}
-          <tr>
-            <td colspan="6" class="text-center text-muted">No attendance records yet.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+          <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.5; margin-bottom: 12px;">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="8.5" cy="7" r="4"/>
+              <line x1="23" y1="11" x2="17" y2="11"/>
+            </svg>
+            <p>No attendance records to review yet.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 
@@ -126,25 +165,28 @@
     .then(r => r.json())
     .then(js => {
       if(js.ok){
-        // Update status text and color
+        // Update status badge
         statusCell.innerText = action;
-        statusCell.className = action === "Approved" ? "status-Approved" :
-                               action === "Rejected" ? "status-Rejected" :
-                               "status-Pending";
+        statusCell.className = "status-badge status-" + action.toLowerCase();
 
         // Show/hide buttons based on new status
-        ApproveBtn.style.display = action === "Approved" ? "none" : "inline-block";
-        ReviewBtn.style.display = action === "Pending" ? "none" : "inline-block";
-        RejectBtn.style.display = action === "Rejected" ? "none" : "inline-block";
+        ApproveBtn.style.display = action === "Approved" ? "none" : "inline-flex";
+        ReviewBtn.style.display = action === "Pending" ? "none" : "inline-flex";
+        RejectBtn.style.display = action === "Rejected" ? "none" : "inline-flex";
+        
+        // Reload to update stats
+        setTimeout(() => location.reload(), 500);
       } else {
-        alert("Error updating attendance.");
+        alert("Error updating attendance status.");
       }
     })
     .catch(err => {
       console.error("Error:", err);
-      alert("Network or server error.");
+      alert("Network or server error occurred.");
     });
   }
   </script>
+
+  <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
 </body>
 </html>

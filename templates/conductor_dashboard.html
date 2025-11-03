@@ -3,106 +3,113 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Conductor Dashboard</title>
+  <title>Register | Attendance System</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background: #f4f6f8;
-      font-family: 'Inter', 'Segoe UI', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    .dashboard-container {
-      max-width: 900px;
-      margin: 40px auto;
-      background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      padding: 30px;
-    }
-    .dashboard-header {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-    .dashboard-header h3 {
-      font-weight: 600;
-      color: #1a1a1a;
-      margin: 0;
-    }
-    .btn-custom {
-      border-radius: 10px;
-      font-weight: 500;
-      transition: all 0.2s;
-    }
-    .btn-custom:hover {
-      transform: translateY(-1px);
-    }
-    .list-group-item {
-      border: none;
-      border-radius: 12px;
-      margin-bottom: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-    .event-title {
-      font-weight: 600;
-      color: #2c3e50;
-    }
-    .event-details {
-      color: #555;
-      font-size: 0.9rem;
-    }
-    @media (max-width: 576px) {
-      .dashboard-container {
-        margin: 20px 10px;
-        padding: 20px;
-      }
-      .dashboard-header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .dashboard-header div {
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
 </head>
 <body>
+  <div class="register-container">
+    <div class="card-custom fade-in">
+      <div class="register-header">
+        <div class="register-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="8.5" cy="7" r="4"/>
+            <line x1="20" y1="8" x2="20" y2="14"/>
+            <line x1="23" y1="11" x2="17" y2="11"/>
+          </svg>
+        </div>
+        <h2 class="heading-secondary">Create Account</h2>
+        <p class="text-muted-custom">Join the attendance management system</p>
+      </div>
 
-  <div class="dashboard-container">
-    <div class="dashboard-header mb-3">
-      <h3>Welcome, {{ conductor_name or "Conductor" }}</h3>
-      <div>
-        <a class="btn btn-primary btn-custom me-2" href="{{ url_for('create_event') }}">Create Event</a>
-        <a class="btn btn-outline-danger btn-custom" href="{{ url_for('logout') }}">Logout</a>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for cat, msg in messages %}
+            <div class="alert-custom alert-{{ cat }}">
+              {{ msg }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" action="{{ url_for('register') }}">
+        <div class="form-row">
+          <div class="form-group-custom">
+            <label class="form-label-custom">Full Name</label>
+            <input type="text" class="form-control-custom" name="name" required placeholder="John Doe">
+          </div>
+          
+          <div class="form-group-custom">
+            <label class="form-label-custom">Email Address</label>
+            <input type="email" class="form-control-custom" name="email" required placeholder="john@example.com">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group-custom">
+            <label class="form-label-custom">Password</label>
+            <input type="password" class="form-control-custom" name="password" required placeholder="Min. 8 characters">
+          </div>
+          
+          <div class="form-group-custom">
+            <label class="form-label-custom">Confirm Password</label>
+            <input type="password" class="form-control-custom" name="confirm_password" required placeholder="Re-enter password">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group-custom">
+            <label class="form-label-custom">Role</label>
+            <select class="form-select-custom" name="role" required>
+              <option value="">Select your role</option>
+              <option value="student">Student</option>
+              <option value="conductor">Conductor</option>
+              <option value="hod">HOD</option>
+            </select>
+          </div>
+          
+          <div class="form-group-custom">
+            <label class="form-label-custom">Branch/Department</label>
+            <select class="form-select-custom" name="branch" required>
+              <option value="">Select branch</option>
+              <option value="AE">AE (Aeronautical Engineering)</option>
+              <option value="CIVIL">CIVIL (Civil Engineering)</option>
+              <option value="MECH">MECH (Mechanical Engineering)</option>
+              <option value="CSE">CSE (Computer Science & Engineering)</option>
+              <option value="CSBS">CSBS (Computer Science & Business Systems)</option>
+              <option value="CYS">CYS (Cyber Security)</option>
+              <option value="CSE-DS">CSE-DS (Data Science)</option>
+              <option value="IOT">IOT (Internet of Things)</option>
+              <option value="AI&DS">AI&DS (Artificial Intelligence & Data Science)</option>
+              <option value="IT">IT (Information Technology)</option>
+              <option value="ECE">ECE (Electronics & Communication Engineering)</option>
+              <option value="EEE">EEE (Electrical & Electronics Engineering)</option>
+              <option value="EIE">EIE (Electronics & Instrumentation Engineering)</option>
+              <option value="VLSI">VLSI (Very Large Scale Integration)</option>
+              <option value="RAI">RAI (Robotics & Artificial Intelligence)</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-custom btn-primary-custom w-100 mt-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="8.5" cy="7" r="4"/>
+            <line x1="20" y1="8" x2="20" y2="14"/>
+            <line x1="23" y1="11" x2="17" y2="11"/>
+          </svg>
+          Create Account
+        </button>
+      </form>
+
+      <div class="register-footer">
+        Already have an account? <a href="{{ url_for('login') }}">Sign in here</a>
       </div>
     </div>
-
-    <hr>
-
-    <h5 class="mb-3 text-secondary">Your Events</h5>
-
-    {% if events %}
-      <ul class="list-group">
-        {% for e in events %}
-          <li class="list-group-item d-flex justify-content-between align-items-start flex-wrap">
-            <div class="me-3">
-              <div class="event-title">{{ e.title }}</div>
-              <div class="event-details">{{ e.description }} • {{ e.location }} • {{ e.when_dt }}</div>
-            </div>
-            <a class="btn btn-sm btn-primary btn-custom mt-2 mt-md-0" href="{{ url_for('view_event', event_id=e.id) }}">Open</a>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="text-muted">No events yet.</p>
-    {% endif %}
   </div>
 
+  <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
 </body>
 </html>

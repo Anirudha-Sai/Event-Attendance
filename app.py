@@ -108,7 +108,7 @@ def current_user():
 def index():
     user = current_user()
     if user:
-        return redirect(url_for("dashboard"))
+        return render_template(("index.html"))
     return render_template("index.html")
 
 

@@ -1,0 +1,92 @@
+/* HOD Event Review Specific Styles */
+
+body {
+  padding: 40px 20px;
+}
+
+.event-info-card {
+  background: linear-gradient(135deg, var(--warning), #f59e0b);
+  color: white;
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 24px;
+}
+
+.event-info-card h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  opacity: 0.95;
+}
+
+.event-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.approval-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.stat-box-number {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.stat-box-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.stat-box.approved .stat-box-number {
+  color: var(--success);
+}
+
+.stat-box.pending .stat-box-number {
+  color: var(--warning);
+}
+
+.stat-box.rejected .stat-box-number {
+  color: var(--danger);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .event-info-card {
+    padding: 24px;
+  }
+  .event-meta {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .action-buttons {
+    flex-direction: column;
+  }
+  .action-buttons button {
+    width: 100%;
+  }
+}

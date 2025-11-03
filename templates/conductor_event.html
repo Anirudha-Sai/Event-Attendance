@@ -3,128 +3,136 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Event - {{ event.title }}</title>
+  <title>{{ event.title }} | Attendance System</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/conductor_event.css') }}">
   <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    body {
-      background: #f4f6f8;
-      font-family: 'Inter', 'Segoe UI', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .event-container {
-      background: #fff;
-      width: 100%;
-      max-width: 900px;
-      margin: 40px 10px;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      padding: 30px;
-    }
-    .event-header {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-    .event-header h3 {
-      margin: 0;
-      font-weight: 600;
-      color: #2c3e50;
-    }
-    .event-details {
-      color: #555;
-      font-size: 0.95rem;
-      margin-bottom: 20px;
-    }
-    .btn-custom {
-      border-radius: 10px;
-      font-weight: 500;
-      transition: all 0.2s;
-    }
-    .btn-custom:hover {
-      transform: translateY(-1px);
-    }
-    #scanner {
-      background: #f8f9fa;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
-    }
-    table {
-      margin-top: 20px;
-    }
-    th {
-      background: #f1f3f4;
-      font-weight: 600;
-    }
-    td {
-      vertical-align: middle;
-    }
-    @media (max-width: 576px) {
-      .event-container {
-        margin: 20px 10px;
-        padding: 20px;
-      }
-      .event-header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      #reader {
-        width: 100% !important;
-      }
-    }
-  </style>
 </head>
 <body>
-
-  <div class="event-container">
-    <div class="event-header">
-      <h3>{{ event.title }}</h3>
-      <a class="btn btn-outline-secondary btn-custom" href="{{ url_for('dashboard') }}">Back</a>
-    </div>
-
-    <p class="event-details">{{ event.description }} • {{ event.location }} • {{ event.when_dt }}</p>
-
-    <div class="mb-3">
-      <button id="startScan" class="btn btn-success btn-custom">Add Attendance (Scan)</button>
-    </div>
-
-    <div id="scanner" style="display:none;">
-      <div id="reader" style="width:100%;max-width:480px;margin:auto;"></div>
-      <div class="mt-3 text-center">
-        <button id="stopScan" class="btn btn-sm btn-danger btn-custom">Stop Scanner</button>
+  <div class="container-custom">
+    <div class="fade-in">
+      <!-- Event Info Header -->
+      <div class="event-info-card">
+        <div class="d-flex justify-between align-center flex-wrap gap-2 mb-3">
+          <h1 style="margin: 0;">{{ event.title }}</h1>
+          <a href="{{ url_for('dashboard') }}" class="btn-custom btn-secondary-custom btn-sm-custom" style="background: rgba(255,255,255,0.2); color: white; border: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Back
+          </a>
+        </div>
+        <div class="event-meta">
+          <div class="event-meta-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            {{ event.location }}
+          </div>
+          <div class="event-meta-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            {{ event.when_dt }}
+          </div>
+        </div>
+        {% if event.description %}
+        <p style="margin-top: 16px; margin-bottom: 0; opacity: 0.95;">{{ event.description }}</p>
+        {% endif %}
       </div>
-    </div>
 
-    <h5 class="mt-4 text-secondary">Scanned / Pending (latest first)</h5>
-    <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>Roll</th>
-            <th>Name</th>
-            <th>Branch</th>
-            <th>Scanned At (UTC)</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="attendanceTable">
-          {% for r in rows %}
-            <tr>
-              <td>{{ r.roll }}</td>
-              <td>{{ r.student_name or "Unknown" }}</td>
-              <td>{{ r.branch or "-" }}</td>
-              <td>{{ r.scanned_at }}</td>
-              <td>{{ r.status }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="card-custom">
+        <!-- Stats -->
+        <div class="attendance-stats">
+          <div class="stat-box">
+            <div class="stat-box-number">{{ rows|length }}</div>
+            <div class="stat-box-label">Total Scans</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-number">{{ rows|selectattr('status', 'equalto', 'Pending')|list|length }}</div>
+            <div class="stat-box-label">Pending</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-number">{{ rows|selectattr('status', 'equalto', 'Approved')|list|length }}</div>
+            <div class="stat-box-label">Approved</div>
+          </div>
+        </div>
+
+        <!-- Scanner Section -->
+        <div class="scanner-card" id="scannerCard">
+          <h3 class="heading-tertiary">QR Code Scanner</h3>
+          <p class="text-muted-custom mb-3">Scan student QR codes to mark attendance</p>
+          <button id="startScan" class="btn-custom btn-success-custom">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            Start Scanning
+          </button>
+          
+          <div id="scanner" class="hidden">
+            <div id="reader"></div>
+            <button id="stopScan" class="btn-custom btn-danger-custom mt-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              Stop Scanner
+            </button>
+          </div>
+        </div>
+
+        <!-- Attendance Table -->
+        <div class="mt-4">
+          <h3 class="heading-tertiary mb-3">Attendance Records</h3>
+          {% if rows %}
+          <div class="table-responsive">
+            <table class="table-custom">
+              <thead>
+                <tr>
+                  <th>Roll Number</th>
+                  <th>Student Name</th>
+                  <th>Branch</th>
+                  <th>Scanned At (UTC)</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTable">
+                {% for r in rows %}
+                <tr>
+                  <td><strong>{{ r.roll }}</strong></td>
+                  <td>{{ r.student_name or "Unknown" }}</td>
+                  <td>{{ r.branch or "-" }}</td>
+                  <td>{{ r.scanned_at }}</td>
+                  <td>
+                    <span class="status-badge status-{{ r.status|lower }}">
+                      {{ r.status }}
+                    </span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.5; margin-bottom: 12px;">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="8.5" cy="7" r="4"/>
+              <polyline points="17 11 19 13 23 9"/>
+            </svg>
+            <p>No attendance records yet. Start scanning to add participants.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 
@@ -133,7 +141,10 @@
   let html5QrCode = null;
 
   document.getElementById("startScan").addEventListener("click", () => {
-    document.getElementById("scanner").style.display = "block";
+    document.getElementById("scanner").classList.remove("hidden");
+    document.getElementById("scannerCard").classList.add("scanner-active");
+    document.getElementById("startScan").style.display = "none";
+    
     const readerElem = document.getElementById("reader");
     readerElem.innerHTML = "";
     html5QrCode = new Html5Qrcode("reader");
@@ -158,8 +169,11 @@
               }).then(res => res.json()).then(js => {
                 const tb = document.getElementById("attendanceTable");
                 const tr = document.createElement("tr");
-                tr.innerHTML = `<td>${decodedText}</td><td>${name}</td><td>${branch}</td><td>${js.scanned_at}</td><td>Pending</td>`;
+                tr.innerHTML = `<td><strong>${decodedText}</strong></td><td>${name}</td><td>${branch}</td><td>${js.scanned_at}</td><td><span class="status-badge status-pending">Pending</span></td>`;
                 tb.prepend(tr);
+                
+                // Update stats
+                location.reload();
               });
             }
           });
@@ -174,13 +188,18 @@
   document.getElementById("stopScan").addEventListener("click", () => {
     if (html5QrCode) {
       html5QrCode.stop().then(() => {
-        document.getElementById("scanner").style.display = "none";
+        document.getElementById("scanner").classList.add("hidden");
+        document.getElementById("scannerCard").classList.remove("scanner-active");
+        document.getElementById("startScan").style.display = "inline-flex";
       });
     } else {
-      document.getElementById("scanner").style.display = "none";
+      document.getElementById("scanner").classList.add("hidden");
+      document.getElementById("scannerCard").classList.remove("scanner-active");
+      document.getElementById("startScan").style.display = "inline-flex";
     }
   });
   </script>
 
+  <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
 </body>
 </html>
