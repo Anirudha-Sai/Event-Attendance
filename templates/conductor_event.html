@@ -139,80 +139,97 @@
   <script>
   const eventId = "{{ event.id }}";
   let html5QrCode = null;
+  let lastScanned = null;
+  let lastScannedAt = 0;
 
-  document.getElementById("startScan").addEventListener("click", () => {
+  function startScanner(){
     document.getElementById("scanner").classList.remove("hidden");
     document.getElementById("scannerCard").classList.add("scanner-active");
     document.getElementById("startScan").style.display = "none";
-    
+    document.getElementById("stopScan").style.display = "inline-flex";
+
     const readerElem = document.getElementById("reader");
     readerElem.innerHTML = "";
     html5QrCode = new Html5Qrcode("reader");
 
-    html5QrCode.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 250 },
-      (decodedText) => {
-        html5QrCode.stop().then(() => {
-          fetch("/scan_lookup", {
-            method: "POST",
-            headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({ roll: decodedText })
-          }).then(res => res.json()).then(data => {
-            const name = data.name || "Unknown";
-            const branch = data.branch || "Unknown";
-            if (confirm(`Scanned: ${decodedText}\nName: ${name}\nBranch: ${branch}\n\nAdd to attendance?`)) {
-              fetch("/add_scan", {
-                method: "POST",
-                headers: {"Content-Type":"application/json"},
-                body: JSON.stringify({ event_id: eventId, roll: decodedText })
-              }).then(res => res.json()).then(js => {
-                const tb = document.getElementById("attendanceTable");
-                if (js.row_html) {
-                  // insert server-rendered row HTML at top
-                  tb.insertAdjacentHTML('afterbegin', js.row_html);
-                } else {
-                  // fallback to client-rendered row
-                  const tr = document.createElement("tr");
-                  tr.innerHTML = `<td><strong>${decodedText}</strong></td><td>${name}</td><td>${branch}</td><td>${js.scanned_at}</td><td><span class="status-badge status-pending">Pending</span></td>`;
-                  tb.prepend(tr);
-                }
+    const config = { fps: 15, qrbox: { width: Math.min(window.innerWidth - 50, 400) } };
 
-                // Update stats using returned counts (more accurate)
-                try {
-                  if (js.counts) {
-                    const totalEl = document.getElementById('stat-total');
-                    const pendingEl = document.getElementById('stat-pending');
-                    const approvedEl = document.getElementById('stat-approved');
-                    if (totalEl && typeof js.counts.total !== 'undefined') totalEl.textContent = js.counts.total;
-                    if (pendingEl && typeof js.counts.pending !== 'undefined') pendingEl.textContent = js.counts.pending;
-                    if (approvedEl && typeof js.counts.approved !== 'undefined') approvedEl.textContent = js.counts.approved;
-                  }
-                } catch (e) { console.error('Error updating stats:', e); }
-              });
-            }
-          });
-        }).catch(err => console.error(err));
+    html5QrCode.start({ facingMode: "environment" }, config,
+      (decodedText, decodedResult) => {
+        // debounce duplicate scans
+        const now = Date.now();
+        if (decodedText === lastScanned && (now - lastScannedAt) < 3000) {
+          return; // ignore duplicate within 3s
+        }
+        lastScanned = decodedText;
+        lastScannedAt = now;
+
+        // Use raw decoded text as roll (per request)
+        fetch("/scan_lookup", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ roll: decodedText })
+        }).then(res => res.json()).then(data => {
+          const name = data.name || "Unknown";
+          const branch = data.branch || "Unknown";
+          if (confirm(`Scanned: ${decodedText}\nName: ${name}\nBranch: ${branch}\n\nAdd to attendance?`)) {
+            fetch("/add_scan", {
+              method: "POST",
+              headers: {"Content-Type":"application/json"},
+              body: JSON.stringify({ event_id: eventId, roll: decodedText })
+            }).then(res => res.json()).then(js => {
+              const tb = document.getElementById("attendanceTable");
+              if (js.row_html) {
+                tb.insertAdjacentHTML('afterbegin', js.row_html);
+              } else {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `<td><strong>${decodedText}</strong></td><td>${name}</td><td>${branch}</td><td>${js.scanned_at}</td><td><span class="status-badge status-pending">Pending</span></td>`;
+                tb.prepend(tr);
+              }
+
+              // Update stats
+              try {
+                if (js.counts) {
+                  const totalEl = document.getElementById('stat-total');
+                  const pendingEl = document.getElementById('stat-pending');
+                  const approvedEl = document.getElementById('stat-approved');
+                  if (totalEl && typeof js.counts.total !== 'undefined') totalEl.textContent = js.counts.total;
+                  if (pendingEl && typeof js.counts.pending !== 'undefined') pendingEl.textContent = js.counts.pending;
+                  if (approvedEl && typeof js.counts.approved !== 'undefined') approvedEl.textContent = js.counts.approved;
+                }
+              } catch (e) { console.error('Error updating stats:', e); }
+            });
+          }
+        }).catch(e => console.error('scan_lookup error', e));
       },
-      (err) => {}
+      (err) => { /* ignore scan errors silently */ }
     ).catch(err => {
       alert("Camera permission or device error: " + err);
     });
-  });
+  }
 
-  document.getElementById("stopScan").addEventListener("click", () => {
+  function stopScanner(){
     if (html5QrCode) {
       html5QrCode.stop().then(() => {
+        html5QrCode.clear();
+        html5QrCode = null;
         document.getElementById("scanner").classList.add("hidden");
         document.getElementById("scannerCard").classList.remove("scanner-active");
         document.getElementById("startScan").style.display = "inline-flex";
+        document.getElementById("stopScan").style.display = "none";
+      }).catch(e => {
+        console.error('Error stopping scanner', e);
       });
     } else {
       document.getElementById("scanner").classList.add("hidden");
       document.getElementById("scannerCard").classList.remove("scanner-active");
       document.getElementById("startScan").style.display = "inline-flex";
+      document.getElementById("stopScan").style.display = "none";
     }
-  });
+  }
+
+  document.getElementById("startScan").addEventListener("click", startScanner);
+  document.getElementById("stopScan").addEventListener("click", stopScanner);
   </script>
 
   <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>

@@ -18,6 +18,7 @@ from email.mime.multipart import MIMEMultipart
 from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import timezone
 from email_service import send_hod_attendance_reports, INDIA_TZ
+from authlib.integrations.flask_client import OAuth
 DB = "database.db"
 app = Flask(__name__)
 # Initialize scheduler
@@ -48,11 +49,6 @@ else:
 app.secret_key = "dev-secret-change-this"  # change for production
 
 
-def get_db():
-    conn = sqlite3.connect(DB, timeout=20)  # Add timeout for busy database
-    conn.row_factory = sqlite3.Row
-    return conn
-
 def get_db_connection():
     """Context manager for database connections"""
     conn = None
@@ -63,6 +59,100 @@ def get_db_connection():
         if conn:
             conn.close()
         raise e
+def get_db():
+    conn = sqlite3.connect(DB, timeout=20)  # Add timeout for busy database
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+# --- OAuth setup (Google) ---
+oauth = OAuth(app)
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
+    oauth.register(
+        name='google',
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        client_kwargs={'scope': 'openid email profile'},
+    )
+
+# Migration: rename role 'conductor' -> 'organiser' without deleting data
+def migrate_rename_conductor_to_organiser():
+    try:
+        with get_db_connection() as conn:
+            conn.execute("UPDATE users SET role='organiser' WHERE role='conductor'")
+            conn.commit()
+            print("DB migration: renamed 'conductor' -> 'organiser' (if any)")
+    except Exception as e:
+        print("Migration error:", e)
+
+migrate_rename_conductor_to_organiser()
+
+
+# --- Google OAuth routes ---
+@app.route('/login/google')
+def login_google():
+    if not (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET):
+        flash('Google OAuth not configured on server.', 'danger')
+        return redirect(url_for('login'))
+    redirect_uri = url_for('auth', _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@app.route('/auth')
+def auth():
+    try:
+        token = oauth.google.authorize_access_token()
+    except Exception as e:
+        print('OAuth error:', e)
+        flash('Authentication failed.', 'danger')
+        return redirect(url_for('login'))
+
+    resp = oauth.google.get('userinfo')
+    userinfo = resp.json()
+    email = userinfo.get('email')
+    if not email or not email.endswith('@vnrvjiet.in'):
+        flash('Only @vnrvjiet.in accounts are permitted.', 'danger')
+        return redirect(url_for('login'))
+
+    name = userinfo.get('name') or email.split('@')[0]
+
+    # create or fetch user record
+    with get_db_connection() as conn:
+        row = conn.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
+        if row:
+            uid = row['id']
+            role = row['role']
+        else:
+            cur = conn.execute('INSERT INTO users (name,email,password_hash,role) VALUES (?,?,?,?)', (name, email, '', 'student'))
+            conn.commit()
+            uid = cur.lastrowid
+            role = 'student'
+
+    session['user_id'] = uid
+    flash('Logged in with Google.', 'success')
+    if role == 'student':
+        return redirect(url_for('student_dashboard'))
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/student')
+def student_dashboard():
+    user = current_user()
+    if not user or user['role'] != 'student':
+        return redirect(url_for('login'))
+    # derive roll from email local-part
+    roll = (user['email'] or '').split('@')[0]
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT e.title, e.when_dt, a.scanned_at, a.status FROM attendance a JOIN events e ON a.event_id = e.id WHERE a.roll=? ORDER BY a.scanned_at DESC",
+            (roll,),
+        ).fetchall()
+    return render_template('student_dashboard.html', user=user, rows=rows, roll=roll)
+
+
 
 
 def init_db():
@@ -172,10 +262,23 @@ def login():
         try:
             with get_db_connection() as conn:
                 row = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-                if row and (row["password_hash"], pw):
-                    session["user_id"] = row["id"]
-                    flash("Logged in successfully.", "success")
-                    return redirect(url_for("dashboard"))
+                if row:
+                    stored = row["password_hash"] or ""
+                    # If stored is hashed, verify. If stored appears to be plaintext (legacy), allow and rehash.
+                    if stored and (stored.startswith('pbkdf2:') or stored.startswith('argon2:')):
+                        if check_password_hash(stored, pw):
+                            session["user_id"] = row["id"]
+                            flash("Logged in successfully.", "success")
+                            return redirect(url_for("dashboard"))
+                    else:
+                        # legacy plaintext - accept and migrate to hashed
+                        if pw == stored:
+                            new_h = generate_password_hash(pw)
+                            conn.execute("UPDATE users SET password_hash=? WHERE id=?", (new_h, row["id"]))
+                            conn.commit()
+                            session["user_id"] = row["id"]
+                            flash("Logged in successfully.", "success")
+                            return redirect(url_for("dashboard"))
                 flash("Invalid credentials", "danger")
         except sqlite3.OperationalError as e:
             flash("Database error. Please try again.", "danger")
@@ -197,9 +300,10 @@ def register():
             return redirect(url_for("register"))
         try:
             with get_db_connection() as conn:
+                pw_hash = generate_password_hash(password)
                 conn.execute(
                     "INSERT INTO users (name,email,password_hash,role,branch) VALUES (?,?,?,?,?)",
-                    (name, email, password, role, branch),
+                    (name, email, pw_hash, role, branch),
                 )
                 conn.commit()
                 flash("Registered successfully! Please log in.", "success")
@@ -224,17 +328,23 @@ def dashboard():
         return redirect(url_for("login"))
     try:
         with get_db_connection() as conn:
-            if user["role"] == "conductor":
+            if user["role"] in ("organiser","conductor"):
                 # allow optional sorting for conductor's events (by when_dt or title)
                 ev_sort = request.args.get('sort', 'when_dt')
                 if ev_sort == 'title':
-                    events = conn.execute(
-                        "SELECT * FROM events WHERE creator_id=? ORDER BY title ASC", (user["id"],)
-                    ).fetchall()
+                    order_clause = 'ORDER BY title ASC'
                 else:
-                    events = conn.execute(
-                        "SELECT * FROM events WHERE creator_id=? ORDER BY when_dt DESC", (user["id"],)
-                    ).fetchall()
+                    order_clause = 'ORDER BY when_dt DESC'
+                # include attendance counts per event (total, approved, pending, rejected)
+                events = conn.execute(
+                    f"SELECT e.*, \
+                        (SELECT COUNT(*) FROM attendance a WHERE a.event_id = e.id) AS total, \
+                        (SELECT COUNT(*) FROM attendance a WHERE a.event_id = e.id AND a.status='Approved') AS approved, \
+                        (SELECT COUNT(*) FROM attendance a WHERE a.event_id = e.id AND a.status='Pending') AS pending, \
+                        (SELECT COUNT(*) FROM attendance a WHERE a.event_id = e.id AND a.status='Rejected') AS rejected \
+                        FROM events e WHERE creator_id=? {order_clause}",
+                    (user["id"],),
+                ).fetchall()
                 print(events)
                 return render_template("conductor_dashboard.html", user=user, events=events)
             elif user["role"] == "student":
@@ -243,9 +353,17 @@ def dashboard():
                 # hod sees all events; support simple sorting
                 ev_sort = request.args.get('sort', 'when_dt')
                 if ev_sort == 'title':
-                    events = conn.execute("SELECT * FROM events ORDER BY title ASC").fetchall()
+                    order_clause = 'ORDER BY title ASC'
                 else:
-                    events = conn.execute("SELECT * FROM events ORDER BY when_dt DESC").fetchall()
+                    order_clause = 'ORDER BY when_dt DESC'
+                events = conn.execute(
+                    f"SELECT e.*, \
+                        (SELECT COUNT(*) FROM attendance a WHERE a.event_id = e.id) AS total, \
+                        (SELECT COUNT(*) FROM attendance a WHERE a.event_id = e.id AND a.status='Approved') AS approved, \
+                        (SELECT COUNT(*) FROM attendance a WHERE a.event_id = e.id AND a.status='Pending') AS pending, \
+                        (SELECT COUNT(*) FROM attendance a WHERE a.event_id = e.id AND a.status='Rejected') AS rejected \
+                        FROM events e {order_clause}",
+                    ).fetchall()
                 print("here: ",events)
                 return render_template("hod_dashboard.html", user=user, events=events)
     except sqlite3.OperationalError as e:
@@ -286,7 +404,7 @@ def view_event(event_id):
             if not event:
                 return "Event not found", 404
             # Different query depending on role: HODs should only see students from their branch
-            if user["role"] == "conductor":
+            if user["role"] in ("organiser","conductor"):
                 # allow optional sorting of attendance list
                 sort = request.args.get('sort', 'roll')
                 if sort == 'scanned_at':
@@ -326,7 +444,7 @@ def view_event(event_id):
 @app.route("/scan_lookup", methods=["POST"])
 def scan_lookup():
     user = current_user()
-    if not user or user["role"] != "conductor":
+    if not user or user["role"] not in ("organiser","conductor"):
         return jsonify({"error": "unauthorized"}), 401
     data = request.get_json()
     roll = data.get("roll", "").strip()
@@ -357,7 +475,7 @@ def scan_lookup():
 @app.route("/add_scan", methods=["POST"])
 def add_scan():
     user = current_user()
-    if not user or user["role"] != "conductor":
+    if not user or user["role"] not in ("organiser","conductor"):
         return jsonify({"error": "unauthorized"}), 401
     payload = request.get_json()
     event_id = payload.get("event_id")
