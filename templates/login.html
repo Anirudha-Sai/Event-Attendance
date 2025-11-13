@@ -30,11 +30,11 @@
           {% endfor %}
         {% endif %}
       {% endwith %}
-
+      
       <form method="post" action="{{ url_for('login') }}">
         <div class="form-group-custom">
           <label class="form-label-custom">Email Address</label>
-          <input type="email" class="form-control-custom" name="email" required placeholder="your.email@example.com" autocomplete="email">
+          <input type="email" class="form-control-custom" name="email" required placeholder="your.email@example.com" autocomplete="email" value="{{ username }}">
         </div>
         
         <div class="form-group-custom">

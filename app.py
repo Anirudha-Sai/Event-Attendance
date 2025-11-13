@@ -247,17 +247,26 @@ def login():
                     else:
                         # legacy plaintext - accept and migrate to hashed
                         if pw == stored:
-                            new_h = generate_password_hash(pw)
+                            # new_h = generate_password_hash(pw)
+                            new_h = (pw)
                             conn.execute("UPDATE users SET password_hash=? WHERE id=?", (new_h, row["id"]))
                             conn.commit()
                             session["user_id"] = row["id"]
                             flash("Logged in successfully.", "success")
                             return redirect(url_for("dashboard"))
-                flash("Invalid credentials", "danger")
+                else:
+                    flash("User doesn't exist! Please register.", "danger")
+                    return render_template("register.html", email=email)
+                    print()
+                flash("Invalid credentials! Please re-verify", "danger")
         except sqlite3.OperationalError as e:
             flash("Database error. Please try again.", "danger")
             print(f"Database error in login: {e}")
-    return render_template("login.html")
+    if request.form.get("email") == None:
+        username = ''
+    else:
+        username = request.form.get("email")
+    return render_template("login.html", username=username)
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -274,7 +283,8 @@ def register():
             return redirect(url_for("register"))
         try:
             with get_db_connection() as conn:
-                pw_hash = generate_password_hash(password)
+                # pw_hash = generate_password_hash(password)
+                pw_hash = (password)
                 conn.execute(
                     "INSERT INTO users (name,email,password_hash,role,branch) VALUES (?,?,?,?,?)",
                     (name, email, pw_hash, role, branch),
@@ -286,7 +296,9 @@ def register():
             flash("Database error. Please try again.", "danger")
             print(f"Database error in register: {e}")
         except sqlite3.IntegrityError:
-            flash("Email already registered!", "danger")
+            flash("Email already registered! Please login", "danger")
+            # render login.html with username as email
+            return render_template("login.html", username=email)
     return render_template("register.html")
 
 @app.route("/logout")
