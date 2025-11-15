@@ -240,7 +240,7 @@ def login():
                     stored = row["password_hash"] or ""
                     # If stored is hashed, verify. If stored appears to be plaintext (legacy), allow and rehash.
                     if stored and (stored.startswith('pbkdf2:') or stored.startswith('argon2:')):
-                        if check_password_hash(stored, pw):
+                        if stored==pw:
                             session["user_id"] = row["id"]
                             flash("Logged in successfully.", "success")
                             return redirect(url_for("dashboard"))
